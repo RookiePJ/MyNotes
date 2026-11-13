@@ -1,0 +1,115 @@
+//@version=5
+indicator("TD Sequential (Setup + Countdown)", overlay=true, max_labels_count=500)
+
+//====================================================
+// TD SETUP LOGIC
+//====================================================
+buySetupCond  = close < close[4]
+sellSetupCond = close > close[4]
+
+var int buySetupCount = 0
+var int sellSetupCount = 0
+
+if buySetupCond
+    buySetupCount := math.min(buySetupCount + 1, 9)
+else
+    buySetupCount := 0
+
+if sellSetupCond
+    sellSetupCount := math.min(sellSetupCount + 1, 9)
+else
+    sellSetupCount := 0
+
+// Reset opposing setup
+if buySetupCond
+    sellSetupCount := 0
+
+if sellSetupCond
+    buySetupCount := 0
+
+//====================================================
+// PLOT SETUP COUNTS 1-9
+//====================================================
+if buySetupCount > 0 and buySetupCount <= 9
+    label.new(
+         bar_index,
+         low,
+         str.tostring(buySetupCount),
+         style=label.style_label_up,
+         textcolor=color.green,
+         color=color.new(color.green, 85),
+         size=size.tiny)
+
+if sellSetupCount > 0 and sellSetupCount <= 9
+    label.new(
+         bar_index,
+         high,
+         str.tostring(sellSetupCount),
+         style=label.style_label_down,
+         textcolor=color.red,
+         color=color.new(color.red, 85),
+         size=size.tiny)
+
+//====================================================
+// SETUP 9 COMPLETION
+//====================================================
+buySetup9 =
+     buySetupCount == 9 and buySetupCount[1] != 9
+
+sellSetup9 =
+     sellSetupCount == 9 and sellSetupCount[1] != 9
+
+plotshape(
+     buySetup9,
+     title="Buy Setup 9",
+     location=location.belowbar,
+     style=shape.triangleup,
+     size=size.large,
+     color=color.lime)
+
+plotshape(
+     sellSetup9,
+     title="Sell Setup 9",
+     location=location.abovebar,
+     style=shape.triangledown,
+     size=size.large,
+     color=color.red)
+
+//====================================================
+// COUNTDOWN STATE
+//====================================================
+var bool buyCountdownActive = false
+var bool sellCountdownActive = false
+
+var int buyCountdown = 0
+var int sellCountdown = 0
+
+// Start countdown after Setup 9
+if buySetup9
+    buyCountdownActive := true
+    buyCountdown := 0
+
+    sellCountdownActive := false
+    sellCountdown := 0
+
+if sellSetup9
+    sellCountdownActive := true
+    sellCountdown := 0
+
+    buyCountdownActive := false
+    buyCountdown := 0
+
+//====================================================
+// COUNTDOWN CONDITIONS
+//====================================================
+buyCountdownCond =
+     close <= low[2]
+
+sellCountdownCond =
+     close >= high[2]
+
+// Count only when active
+if buyCountdownActive and buyCountdown < 13 and buyCountdownCond
+    buyCountdown += 1
+
+if sellCountdownActive and sellCountdown < 13 and
