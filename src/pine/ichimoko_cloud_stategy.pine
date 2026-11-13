@@ -1,0 +1,73 @@
+//@version=5
+strategy(
+    "Ichimoku Strategy With Alerts",
+    overlay=true,
+    initial_capital=100000)
+
+calcMidpoint(length) =>
+    (ta.highest(high, length) + ta.lowest(low, length)) / 2
+
+tenkan = calcMidpoint(9)
+kijun = calcMidpoint(26)
+
+senkouA = (tenkan + kijun) / 2
+senkouB = calcMidpoint(52)
+
+cloudTop = math.max(senkouA, senkouB)
+cloudBottom = math.min(senkouA, senkouB)
+
+longEntry =
+    ta.crossover(tenkan, kijun) and
+    close > cloudTop
+
+longExit =
+    ta.crossunder(tenkan, kijun) or
+    close < cloudBottom
+
+if longEntry
+    strategy.entry("LONG", strategy.long)
+
+    alert(
+        "ICHIMOKU LONG ENTRY | " +
+        syminfo.ticker +
+        " | Price=" +
+        str.tostring(close),
+        alert.freq_once_per_bar_close)
+
+if longExit
+    strategy.close("LONG")
+
+    alert(
+        "ICHIMOKU LONG EXIT | " +
+        syminfo.ticker +
+        " | Price=" +
+        str.tostring(close),
+        alert.freq_once_per_bar_close)
+
+
+
+highProbabilityLong =
+    close > ta.sma(close, 200) and
+    close > cloudTop and
+    tenkan > kijun and
+    senkouA > senkouB
+
+ alertcondition(
+     highProbabilityLong,
+     title="High Probability Long",
+     message=
+       "Strong bullish alignment: " +
+       "{{ticker}}")
+
+
+highProbabilityExit =
+    close < cloudBottom or
+    tenkan < kijun
+
+alertcondition(
+    highProbabilityExit,
+    title="High Probability Exit",
+    message=
+      "Strong bearish alignment: " +
+      "{{ticker}}")
+

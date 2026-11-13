@@ -1,0 +1,109 @@
+//@version=5
+indicator("Ichimoku Cloud with Alerts", overlay=true)
+
+// Parameters
+tenkanPeriod = input.int(9, "Tenkan")
+kijunPeriod = input.int(26, "Kijun")
+senkouBPeriod = input.int(52, "Span B")
+displacement = input.int(26, "Displacement")
+
+// Functions
+calcMidpoint(length) =>
+    (ta.highest(high, length) + ta.lowest(low, length)) / 2
+
+// Ichimoku Components
+tenkan = calcMidpoint(tenkanPeriod)
+kijun = calcMidpoint(kijunPeriod)
+
+senkouA = (tenkan + kijun) / 2
+senkouB = calcMidpoint(senkouBPeriod)
+
+cloudTop = math.max(senkouA, senkouB)
+cloudBottom = math.min(senkouA, senkouB)
+
+// Plots
+plot(tenkan, color=color.blue, linewidth=2, title="Tenkan")
+plot(kijun, color=color.red, linewidth=2, title="Kijun")
+
+spanA = plot(
+    senkouA,
+    offset=displacement,
+    color=color.green,
+    title="Span A")
+
+spanB = plot(
+    senkouB,
+    offset=displacement,
+    color=color.maroon,
+    title="Span B")
+
+fill(
+    spanA,
+    spanB,
+    color=senkouA > senkouB ?
+        color.new(color.green, 85) :
+        color.new(color.red, 85))
+
+// Signals
+bullCross = ta.crossover(tenkan, kijun)
+bearCross = ta.crossunder(tenkan, kijun)
+
+priceAboveCloud = close > cloudTop
+priceBelowCloud = close < cloudBottom
+
+longEntry =
+    bullCross and
+    priceAboveCloud
+
+longExit =
+    bearCross or
+    priceBelowCloud
+
+fullBullAlignment =
+    close > cloudTop and
+    tenkan > kijun and
+    senkouA > senkouB
+
+// Chart markers
+plotshape(
+    longEntry,
+    style=shape.triangleup,
+    location=location.belowbar,
+    color=color.green,
+    size=size.large,
+    title="Long Entry")
+
+plotshape(
+    longExit,
+    style=shape.triangledown,
+    location=location.abovebar,
+    color=color.red,
+    size=size.large,
+    title="Long Exit")
+
+// ALERTS
+
+alertcondition(
+    longEntry,
+    title="Ichimoku Long Entry",
+    message="LONG ENTRY: {{ticker}} Close={{close}}")
+
+alertcondition(
+    longExit,
+    title="Ichimoku Long Exit",
+    message="LONG EXIT: {{ticker}} Close={{close}}")
+
+alertcondition(
+    bullCross,
+    title="Bullish TK Cross",
+    message="Bullish Tenkan/Kijun Cross on {{ticker}}")
+
+alertcondition(
+    bearCross,
+    title="Bearish TK Cross",
+    message="Bearish Tenkan/Kijun Cross on {{ticker}}")
+
+alertcondition(
+    fullBullAlignment,
+    title="Full Bullish Alignment",
+    message="Price above cloud, green cloud, Tenkan>Kijun on {{ticker}}")
